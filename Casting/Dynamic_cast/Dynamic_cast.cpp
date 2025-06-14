@@ -6,7 +6,7 @@ using namespace std;
 
 //Example: Safely downcasting in an inheritance hierarchy
 
-cpp
+
 class Base {
 public:
     virtual ~Base() {} // Ensure polymorphic behavior
