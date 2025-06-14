@@ -17,3 +17,11 @@ Unlike some languages where such conversions can be implicit or loose, C++ provi
 | dynamic_cast     | Safe downcasting in polymorphic hierarchies              | Run-time        | Ensures valid conversion           | Requires polymorphic types, runtime overhead                    |
 | reinterpret_cast | Low-level converting of pointer types or unrelated types | None            | Powerful for low-level operations  | Not type-safe, potential for undefined behavior                 |
 | const_cast       | Adding or removing const qualifiers                      | No (just const) | Allows modification when necessary | Can break const-correct design, undefined behavior when misused |
+
+# Pros and Cons in Inheritance-Based Casting
+
+| Cast Type                          | Pros                                                                     | Cons                                                                |
+|------------------------------------|--------------------------------------------------------------------------|---------------------------------------------------------------------|
+| Upcasting                          | Implicit, always safe, leverages polymorphism                            | Limited to converting from derived to base only.                    |
+| static_cast (used in downcasting)  | Fast, provides clear intent when you're certain of the type              | No runtime safety check; can lead to undefined behavior if misused. |
+| dynamic_cast (used in downcasting) | Ensures type safety at runtime; prevents misuse by verifying correctness | Incurs runtime overhead; can only be used with polymorphic types.   |
