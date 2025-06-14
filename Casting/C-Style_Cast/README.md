@@ -5,6 +5,7 @@ When:it's best avoided in C++ code because it doesn't specify the nature of the 
 Pros:
 - Short syntax.
 - Works in simple,well-understood conversions.
+  
 Cons:
 - Lacks clarity
 - it can inadvertently perform dangerous or unintend conversions.
