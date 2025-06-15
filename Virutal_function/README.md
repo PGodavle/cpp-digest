@@ -61,3 +61,9 @@ If an object of a derived class is deleted through a pointer to the base class a
 - Situations with Unknown Future Requirements: If there’s a possibility that the behavior of certain operations might need to be extended or modified in the future—perhaps because your system might later need to handle new subclasses—then virtual functions allow you to extend functionality without a major refactor.
 
 - Avoiding Redundant Type Checks: Without virtual functions, you might end up writing long chains of type checks to decide which action to perform. Virtual functions encapsulate this decision-making process in the runtime dispatch mechanism, thereby streamlining your code.
+# When Not to Use Virtual Functions
+- Performance-Critical Sections: While the overhead of virtual function calls is generally small, there are scenarios, like deep recursion or inner loops in high-performance computing, where even a tiny overhead can add up. In such cases, techniques like static polymorphism using templates might be more appropriate.
+
+- Final, Non-Extensible Classes: If you know for sure that a class will never need to be extended or if you’re writing a final, concrete class, there is no need for virtual functions. Removing unnecessary polymorphism can simplify your code and slightly reduce runtime overhead.
+
+- Constructor/Destructor Contexts: Be cautious when calling virtual functions inside constructors or destructors. During these phases, the virtual mechanism resolves to the function corresponding to the current class, not any overridden versions in derived classes. This is a common pitfall that can lead to unexpected behavior.
