@@ -10,7 +10,7 @@ Variadic templates are useful when:
 - Creating flexible functions (e.g., logging, printing, formatting).Check -> Logging_Function.cpp
 - Building generic data structures (e.g., std::tuple). -> Custom_Tuple_Class.cpp
 - Implementing type-safe operations (e.g., forwarding arguments). -> Function_Wrapper.cpp
-- Reducing code duplication (e.g., multiple overloads)._> Restricting_Function_to_Only_Accept_Integers.cpp
+- Reducing code duplication (e.g., multiple overloads).-> Restricting_Function_to_Only_Accept_Integers.cpp
 ## Real-World Analogy
 Think of variadic templates like a Swiss Army knife:
 - You have multiple tools (functions or classes).
