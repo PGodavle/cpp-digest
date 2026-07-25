@@ -1,4 +1,12 @@
 
+# Error Scenario:
+
+Base* b = new Base();
+
+Derived* d = static_cast<Derived*>(b);
+
+d->show();   // Undefined Behavior
+
 # Pros:
 - Provides better readability by explicitly stating the conversion type.
 - Compile-time checking ensures that the conversion is safe within the language rules.
