@@ -1,337 +1,247 @@
-What is unique_ptr?
+# std::unique_ptr — Exclusive ownership
 
-A smart pointer with exclusive ownership.
+A concise guide to `std::unique_ptr` with clear examples, best practices and common pitfalls.
 
-Only one object owns the resource.
+## Table of contents
 
-unique_ptr
-     |
-     ▼
-+-----------+
-| Heap Obj  |
-+-----------+
-Creating unique_ptr
-Method 1
-std::unique_ptr<int> ptr(new int(100));
+- [Overview](#overview)
+- [Why use std::unique_ptr?](#why-use-stduniqueptr)
+- [Creating unique_ptr](#creating-unique_ptr)
+- [Accessing data and members](#accessing-data-and-members)
+- [Copy vs Move semantics](#copy-vs-move-semantics)
+- [Passing and returning unique_ptr](#passing-and-returning-unique_ptr)
+- [Important member functions](#important-member-functions)
+- [Arrays and unique_ptr](#arrays-and-unique_ptr)
+- [Polymorphism](#polymorphism)
+- [Performance](#performance)
+- [Common mistakes](#common-mistakes)
+- [Quick interview questions](#quick-interview-questions)
 
-Works.
+---
 
-Method 2 (Recommended)
+## Overview
+
+`std::unique_ptr` is a lightweight smart pointer that enforces exclusive ownership of a dynamically allocated object. When the owning `unique_ptr` is destroyed or reset, the managed object is automatically deleted.
+
+Benefits:
+
+- Automatic lifetime management (no manual `delete`).
+- Small and efficient (typically the size of a raw pointer).
+- No reference-counting overhead.
+
+---
+
+## Why use std::unique_ptr?
+
+- Clear ownership semantics: exactly one owner at a time.
+- Exception-safe resource management (prefer `std::make_unique`).
+- Integrates well with RAII and modern C++ move semantics.
+
+---
+
+## Creating unique_ptr
+
+Preferred (recommended):
+
+```cpp
 auto ptr = std::make_unique<int>(100);
+```
 
-Always prefer make_unique().
+Works but less preferred:
 
-Why?
+```cpp
+std::unique_ptr<int> ptr(new int(100));
+```
 
-Cleaner
-Exception safe
-No repeated type
-Accessing Data
+Why prefer `make_unique()`?
+
+- Cleaner code
+- Exception-safe (no leak if construction throws)
+- Avoids repeating the type
+
+---
+
+## Accessing data and members
+
+Use `*` and `->` like a raw pointer:
+
+```cpp
 #include <memory>
 #include <iostream>
 
-int main()
-{
+int main() {
     auto ptr = std::make_unique<int>(25);
+    std::cout << *ptr << '\n'; // prints 25
 
-    std::cout << *ptr;
+    struct Student { void print() { std::cout << "Hello\n"; } };
+    auto s = std::make_unique<Student>();
+    s->print(); // prints Hello
 }
+```
 
-Output
+---
 
-25
-Access Members
-class Student
-{
-public:
+## Copy vs Move semantics
 
-    void print()
-    {
-        std::cout << "Hello";
-    }
-};
+- Copying is NOT allowed. `unique_ptr` represents exclusive ownership and is non-copyable:
 
-int main()
-{
-    auto ptr = std::make_unique<Student>();
-
-    ptr->print();
-}
-
-Output
-
-Hello
-Copy is NOT Allowed
-
-Wrong
-
+```cpp
 auto p1 = std::make_unique<int>(10);
+auto p2 = p1; // compile-time error
+```
 
-auto p2 = p1;
+- Moving is allowed. Ownership is transferred with `std::move`:
 
-Compiler Error
-
-Reason
-
-Two owners cannot own same memory.
-Move is Allowed
+```cpp
 auto p1 = std::make_unique<int>(10);
+auto p2 = std::move(p1); // p1 becomes nullptr, p2 owns the object
+```
 
-auto p2 = std::move(p1);
+Example:
 
-Memory
-
-Before
-
-p1
-
-↓
-
-Object
-
-After
-
-p1 ---> nullptr
-
-p2
-
-↓
-
-Object
-
-Example
-
+```cpp
 #include <memory>
 #include <iostream>
 
-int main()
-{
+int main() {
     auto p1 = std::make_unique<int>(500);
-
     auto p2 = std::move(p1);
 
-    if(p1 == nullptr)
-        std::cout << "Moved\n";
-
-    std::cout << *p2;
+    if (!p1) std::cout << "Moved\n";
+    std::cout << *p2 << '\n'; // prints 500
 }
+```
 
-Output
+---
 
-Moved
-500
-Passing unique_ptr
+## Passing and returning unique_ptr
 
-Wrong
+To transfer ownership into a function, accept a `unique_ptr` by value and call the function with `std::move`:
 
-void fun(std::unique_ptr<int> p)
-{
-}
-
-int main()
-{
-    auto ptr = std::make_unique<int>(10);
-
-    fun(ptr);
-}
-
-Compiler Error.
-
-Need ownership transfer.
-
-Correct
-
-fun(std::move(ptr));
-
-Read only
-
-void fun(const std::unique_ptr<int>& ptr)
-{
-    std::cout << *ptr;
-}
-
-Ownership remains with caller.
-
-Returning unique_ptr
-std::unique_ptr<int> create()
-{
-    return std::make_unique<int>(100);
-}
-
-int main()
-{
-    auto ptr = create();
-}
-
-Move happens automatically (or is elided).
-
-Important Member Functions
-get()
-
-Returns raw pointer.
-
-auto ptr = std::make_unique<int>(20);
-
-int* p = ptr.get();
-
-std::cout << *p;
-
-Output
-
-20
-
-Ownership is still with unique_ptr.
-
-release()
-
-Releases ownership.
+```cpp
+void takeOwnership(std::unique_ptr<int> p) { /* p now owns the resource */ }
 
 auto ptr = std::make_unique<int>(10);
+takeOwnership(std::move(ptr)); // ptr becomes nullptr
+```
 
-int* raw = ptr.release();
+If you only need read-only access, pass by const reference to avoid transferring ownership:
 
-delete raw;
+```cpp
+void readOnly(const std::unique_ptr<int>& p) { std::cout << *p << '\n'; }
+```
 
-Memory
+Returning a `unique_ptr` transfers ownership to the caller (move or RVO):
 
-Before
+```cpp
+std::unique_ptr<int> create() { return std::make_unique<int>(100); }
+auto p = create();
+```
 
-unique_ptr
+---
 
-↓
+## Important member functions
 
-Object
+- get()
+  - Returns the raw pointer without changing ownership.
+  - Example: `int* raw = ptr.get();`
 
-After
+- release()
+  - Releases ownership and returns the raw pointer. The caller is responsible for deleting it.
 
-unique_ptr ---> nullptr
+```cpp
+auto ptr = std::make_unique<int>(10);
+int* raw = ptr.release(); // ptr -> nullptr
+delete raw; // must delete manually
+```
 
-raw
+- reset()
+  - Deletes the currently owned object (if any) and optionally takes ownership of a new pointer.
 
-↓
+```cpp
+ptr.reset(new int(20)); // deletes previous object, now owns new one
+```
 
-Object
+- swap()
+  - Exchanges managed objects with another `unique_ptr`.
 
-You must delete the raw pointer yourself.
-
-reset()
-
-Deletes current object and optionally points to a new one.
-
-auto ptr = std::make_unique<int>(5);
-
-ptr.reset(new int(20));
-
-std::cout << *ptr;
-
-Output
-
-20
-swap()
-auto p1 = std::make_unique<int>(1);
-auto p2 = std::make_unique<int>(2);
-
+```cpp
 p1.swap(p2);
+```
 
-std::cout << *p1 << " " << *p2;
+---
 
-Output
+## Arrays and unique_ptr
 
-2 1
-Arrays
+Use the array specialization to manage arrays so `delete[]` is used:
 
-Wrong
+Wrong:
 
-std::unique_ptr<int> arr(new int[10]);
+```cpp
+std::unique_ptr<int> arr(new int[10]); // wrong, will call delete
+```
 
-Correct
+Correct:
 
+```cpp
 std::unique_ptr<int[]> arr(new int[10]);
-
 arr[0] = 100;
+```
 
-Automatically uses
+---
 
-delete[]
-Polymorphism
-class Base
-{
-public:
-    virtual ~Base() = default;
-};
+## Polymorphism
 
-class Derived : public Base
-{
-};
+`unique_ptr` works with polymorphism when storing through a base pointer that has a virtual destructor:
 
-int main()
-{
-    std::unique_ptr<Base> ptr =
-        std::make_unique<Derived>();
-}
+```cpp
+class Base { public: virtual ~Base() = default; };
+class Derived : public Base { };
 
-Perfectly valid.
+std::unique_ptr<Base> p = std::make_unique<Derived>();
+```
 
-Performance
-Size of unique_ptr
+---
 
-↓
+## Performance
 
-Usually
+- `sizeof(std::unique_ptr<T>)` is typically the same as a raw pointer.
+- No reference counting: very lightweight and fast.
 
-sizeof(raw pointer)
+---
 
-Very lightweight.
+## Common mistakes
 
-No reference counting.
+- Forgetting `std::move()` when transferring ownership (results in compile errors).
+- Calling `delete` on `ptr.get()` — double delete or undefined behavior, since `unique_ptr` will delete it on destruction.
+- Using `release()` and then forgetting to `delete` the returned raw pointer — memory leak.
 
-Common Mistakes
-Forgetting std::move()
-fun(ptr);
+---
 
-Should be
+## Quick interview questions
 
-fun(std::move(ptr));
-Calling delete
+Q: Why can't `unique_ptr` be copied?
 
-Wrong
+A: It models exclusive ownership — copying would allow multiple owners.
 
-delete ptr.get();
+Q: Why support move semantics?
 
-unique_ptr will also delete it.
+A: To transfer ownership safely without copying the underlying resource.
 
-Double delete.
+Q: Difference between `release()` and `reset()`?
 
-Using release()
-auto raw = ptr.release();
+- `release()` releases ownership and returns the raw pointer; caller must delete it.
+- `reset()` deletes the managed object (if any) and optionally takes ownership of a new pointer.
 
-Forgetting
+Q: Difference between `get()` and `release()`?
 
-delete raw;
+- `get()` returns the raw pointer while ownership remains with `unique_ptr`.
+- `release()` returns the raw pointer and relinquishes ownership.
 
-Memory leak.
+Q: Why prefer `make_unique()`?
 
-Interview Questions
-Q1 Why can't unique_ptr be copied?
+- Exception safety, cleaner syntax, and no repeated type.
 
-Because it represents exclusive ownership.
+---
 
-Q2 Why does unique_ptr support move semantics?
-
-Ownership can be transferred safely without copying the underlying resource.
-
-Q3 Difference between release() and reset()?
-release()	reset()
-Releases ownership	Deletes current object
-Returns raw pointer	Doesn't return pointer
-Caller must delete	Smart pointer handles deletion
-Q4 Difference between get() and release()?
-get()	release()
-Ownership stays	Ownership transferred
-Returns raw pointer	Returns raw pointer
-Object still managed	Object no longer managed
-Q5 Why prefer make_unique?
-Exception safe
-Cleaner syntax
-Recommended by modern C++
-Avoids repeating the type
+If you want, I can also rename this file to `README.md` (case-sensitive) and add links to related docs in the repository.
